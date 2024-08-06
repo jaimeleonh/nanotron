@@ -74,12 +74,14 @@ process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.EventContent.EventContent_cff')
 process.load('Configuration.Geometry.GeometryRecoDB_cff')
+process.load('Configuration.StandardSequences.Reconstruction_cff')
 process.load('PhysicsTools.NanoAOD.nano_cff')
 
 process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
 process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('FWCore.MessageLogger.MessageLogger_cfi')
 process.load('TrackingTools/TransientTrack/TransientTrackBuilder_cfi')
+
 
 if options.isData:
     process.load('Configuration.StandardSequences.MagneticField_AutoFromDBCurrent_cff')
@@ -131,11 +133,13 @@ files = {
 
 if len(options.inputFiles) > 0:
     process.source = cms.Source("PoolSource",
-        fileNames = cms.untracked.vstring(options.inputFiles)
+        fileNames = cms.untracked.vstring(options.inputFiles),
+        bypassVersionCheck = cms.untracked.bool(True)
     )
 else:
     process.source = cms.Source("PoolSource",
-        fileNames = cms.untracked.vstring(files[options.year]['data'] if options.isData else files[options.year]['mc'])
+        fileNames = cms.untracked.vstring(files[options.year]['data'] if options.isData else files[options.year]['mc']),
+        bypassVersionCheck = cms.untracked.bool(True)
     )
 
 # ------------------------------------------------------------------------
@@ -221,7 +225,8 @@ else:
     if options.year == '2017':
         process.GlobalTag = GlobalTag(process.GlobalTag, '102X_mc2017_realistic_v8', '')
     if options.year == '2018' or options.year == '2018D':
-        process.GlobalTag = GlobalTag(process.GlobalTag, '102X_upgrade2018_realistic_v21', '')
+        process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2018_realistic_v16_L1v1', '')
+        #process.GlobalTag = GlobalTag(process.GlobalTag, '102X_upgrade2018_realistic_v21', '')
     jetCorrectionsAK4PFchs = ('AK4PFchs', ['L1FastJet', 'L2Relative', 'L3Absolute'], 'None')
 
 # ------------------------------------------------------------------------
@@ -474,7 +479,11 @@ process.muonVerticesTable = cms.EDProducer("MuonVertexProducer",
     dlenSigMin = cms.double(0),
     ptMin   = cms.double(0.8),
     svName  = cms.string("muonSV"),
+    measurementTrackerEventInputTag = cms.InputTag("MeasurementTrackerEvent"),
 )
+
+from RecoTracker.MeasurementDet.measurementTrackerEventDefault_cfi import measurementTrackerEventDefault as _measurementTrackerEventDefault
+process.MeasurementTrackerEvent = _measurementTrackerEventDefault.clone()
 
 # process.muonVerticesCandidateTable =  cms.EDProducer("SimpleCandidateFlatTableProducer",
 #     src = cms.InputTag("muonVerticesTable"),
@@ -636,7 +645,10 @@ if options.isData:
 
     # Main
     process.llpnanoAOD_step_mu = cms.Path(
+        # process.MeasurementTrackerEvent *
+        # process.ckfTrackCandidates +
         #process.muonFilterSequence+
+        # process.MeasurementTrackerEvent+
         process.nanoSequence+
         process.adaptedVertexing+
         
@@ -667,6 +679,9 @@ if options.isData:
 else:
     # Main
     process.llpnanoAOD_step = cms.Path(
+        # process.MeasurementTrackerEvent *
+        # process.ckfTrackCandidates +
+        # process.MeasurementTrackerEvent+
         process.nanoSequenceMC+
         process.adaptedVertexing+
         process.pfOnionTagInfos+
@@ -737,6 +752,33 @@ modulesToRemove = [
     
 ]
 
+if not options.isData:
+    process.llpnanoAOD_step.remove(getattr(process, "lhcInfoTable"))
+    process.nanoSequenceFS.remove(getattr(process, "particleLevelTables"))
+    process.nanoSequenceFS.remove(getattr(process, "particleLevelSequence"))
+    process.llpnanoAOD_step.remove(getattr(process, "electronMCTable"))
+    process.llpnanoAOD_step.remove(getattr(process, "lowPtElectronMCTable"))
+    process.llpnanoAOD_step.remove(getattr(process, "lheWeightsTable"))
+    process.llpnanoAOD_step.remove(getattr(process, "genParticles2HepMC"))
+    process.llpnanoAOD_step.remove(getattr(process, "genParticles2HepMCHiggsVtx"))
+    process.llpnanoAOD_step.remove(getattr(process, "particleLevel"))
+    process.llpnanoAOD_step.remove(getattr(process, "particleLevelForMatching"))
+    process.llpnanoAOD_step.remove(getattr(process, "particleLevelForMatchingLowPt"))
+    process.llpnanoAOD_step.remove(getattr(process, "tautagger"))
+    process.llpnanoAOD_step.remove(getattr(process, "tautaggerForMatching"))
+    process.llpnanoAOD_step.remove(getattr(process, "tautaggerForMatchingLowPt"))
+    process.llpnanoAOD_step.remove(getattr(process, "matchingElecPhoton"))
+    process.llpnanoAOD_step.remove(getattr(process, "matchingLowPtElecPhoton"))
+    process.llpnanoAOD_step.remove(getattr(process, "electronsMCMatchForTableAlt"))
+    process.llpnanoAOD_step.remove(getattr(process, "lowPtElectronsMCMatchForTableAlt"))
+    process.llpnanoAOD_step.remove(getattr(process, "genTable"))
+    process.llpnanoAOD_step.remove(getattr(process, "genWeightsTable"))
+    process.llpnanoAOD_step.remove(getattr(process, "rivetLeptonTable"))
+    process.llpnanoAOD_step.remove(getattr(process, "rivetPhotonTable"))
+    process.llpnanoAOD_step.remove(getattr(process, "rivetMetTable"))
+    process.llpnanoAOD_step.remove(getattr(process, "HTXSCategoryTable"))
+    process.llpnanoAOD_step.remove(getattr(process, "rivetProducerHTXS"))
+
 #override final jets
 
 #process.finalJets.addBTagInfo=cms.bool(True)
@@ -760,6 +802,9 @@ for moduleName in modulesToRemove:
 process.genParticleTable.variables.vertex_x = Var("vertex().x()", float, doc="vertex x position")
 process.genParticleTable.variables.vertex_y = Var("vertex().y()", float, doc="vertex y position")
 process.genParticleTable.variables.vertex_z = Var("vertex().z()", float, doc="vertex z position")
+process.genParticleTable.variables.px = Var("px()", float, doc="px")
+process.genParticleTable.variables.py = Var("py()", float, doc="py")
+process.genParticleTable.variables.pz = Var("pz()", float, doc="pz")
 
 '''
 process.MINIAODoutput = cms.OutputModule("PoolOutputModule",
@@ -769,6 +814,8 @@ process.MINIAODoutput = cms.OutputModule("PoolOutputModule",
 )
 '''
 #process.endpath= cms.EndPath(process.OUT)
+
+print(process.electronTable)
 
 # ------------------------------------------------------------------------
 process.load("PhysicsTools.NanoAOD.vertices_cff")
@@ -785,7 +832,7 @@ process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(Fals
 from os import getenv
 if options.isData:
     import FWCore.PythonUtilities.LumiList as LumiList
-    goldenjson = "/home/users/mcitron/bparkGeneration/CMSSW_10_6_31/src/nanotron/json/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt"
+    goldenjson = "Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt"
     lumilist = LumiList.LumiList(filename=goldenjson).getCMSSWString().split(',')
     print("Found json list of lumis to process with {} lumi sections from {}".format(len(lumilist),goldenjson))
     process.source.lumisToProcess = cms.untracked(cms.VLuminosityBlockRange()+lumilist)
@@ -796,4 +843,8 @@ from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEar
 process = customiseEarlyDelete(process)
 #print process.dumpPython()
 # End adding early deletion
+
+
+
+
 
