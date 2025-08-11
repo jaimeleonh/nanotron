@@ -190,6 +190,8 @@ process.NANOAODSIMoutput = cms.OutputModule("NanoAODOutputModule",
         'drop *_tkMetTable_*_*',
         'drop *_puppiMetTable_*_*',
         'drop *_ttbarCategoryTable_*_*',
+        'drop *_finalJetsAK8ConstituentsTable_*_*',
+        'drop *_pfCandidatesTable_*_*',
 
         'drop *_rivetMetTable_*_*',
         'drop *_rivetProducerHTXS_*_*',
@@ -249,7 +251,7 @@ from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
 updateJetCollection(
     process,
     labelName      = "OnionTag",
-    jetSource      = cms.InputTag('updatedJets'),
+    jetSource      = cms.InputTag('updatedJetsPuppi'),
     jetCorrections = jetCorrectionsAK4PFchs,
     pfCandidates   = cms.InputTag('packedPFCandidates'),
     pvSource       = cms.InputTag("offlineSlimmedPrimaryVertices"),
@@ -268,7 +270,7 @@ updateJetCollection(
 )
 
 process.pfOnionTagInfos = cms.EDProducer("OnionInfoProducer",
-    jets                       = cms.InputTag("updatedJets"),
+    jets                       = cms.InputTag("updatedJetsPuppi"),
     muonSrc                    = cms.InputTag("slimmedMuons"),
     electronSrc                = cms.InputTag("slimmedElectrons"),
     shallow_tag_infos          = cms.InputTag('pfDeepCSVTagInfosOnionTag'),
@@ -279,12 +281,12 @@ process.pfOnionTagInfos = cms.EDProducer("OnionInfoProducer",
 )
 
 process.nanoTable = cms.EDProducer("NANOProducer",
-    srcJets   = cms.InputTag("updatedJets"),
+    srcJets   = cms.InputTag("updatedJetsPuppi"),
     srcTags   = cms.InputTag("pfOnionTagInfos")
 )
 
 process.nanoGenTable = cms.EDProducer("NANOGenProducer",
-    srcJets   = cms.InputTag("updatedJets"),
+    srcJets   = cms.InputTag("updatedJetsPuppi"),
     srcLabels = cms.InputTag("MCLabels"),
     srcTags   = cms.InputTag("pfOnionTagInfos")
 )
